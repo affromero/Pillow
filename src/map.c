@@ -86,8 +86,9 @@ PyImaging_MapBuffer(PyObject *self, PyObject *args) {
         PyErr_SetString(PyExc_ValueError, "negative image dimension or buffer offset");
         return NULL;
     }
-    int pixelsize = (!strcmp(mode, "L") || !strcmp(mode, "P")) ? 1 :
-        (!strncmp(mode, "I;16", 4) ? 2 : 4);
+    int pixelsize = (!strcmp(mode, "L") || !strcmp(mode, "P"))
+                        ? 1
+                        : (!strncmp(mode, "I;16", 4) ? 2 : 4);
     if (xsize > INT_MAX / pixelsize) {
         PyErr_SetString(PyExc_MemoryError, "Integer overflow in row size");
         return NULL;

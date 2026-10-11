@@ -249,8 +249,7 @@ _setimage(ImagingEncoderObject *encoder, PyObject *args) {
         x1 = im->xsize;
         y1 = im->ysize;
     }
-    if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 ||
-        x1 > im->xsize || y1 > im->ysize) {
+    if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 || x1 > im->xsize || y1 > im->ysize) {
         PyErr_SetString(PyExc_SystemError, "tile cannot extend outside image");
         return NULL;
     }

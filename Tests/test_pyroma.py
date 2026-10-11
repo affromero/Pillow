@@ -4,32 +4,22 @@ from importlib.metadata import metadata
 
 import pytest
 
-from PIL import __version__
-
 pyroma = pytest.importorskip("pyroma", reason="Pyroma not installed")
 
 
 def test_pyroma() -> None:
     # Arrange
-    data = pyroma.projectdata.map_metadata_keys(metadata("Pillow"))
+    package_metadata = metadata("Pillow")
+    data = {}
+    for key in set(package_metadata.keys()):
+        values = package_metadata.get_all(key)
+        data[pyroma.projectdata.normalize(key)] = (
+            values[0] if len(values) == 1 else values
+        )
+    data["description"] = package_metadata.get_payload().strip()
 
     # Act
     rating = pyroma.ratings.rate(data)
 
     # Assert
-    if "rc" in __version__:
-        # Pyroma needs to chill about RC versions and not kill all our tests.
-        assert rating == (
-            9,
-            ["The package's version number does not comply with PEP-386."],
-        )
-
-    else:
-        # Should have a perfect score, but pyroma does not support PEP 639 yet.
-        assert rating == (
-            9,
-            [
-                "Your package does neither have a license field "
-                "nor any license classifiers."
-            ],
-        )
+    assert rating == (10, [])
