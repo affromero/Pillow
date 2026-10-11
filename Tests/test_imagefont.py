@@ -26,6 +26,22 @@ from .helper import (
 )
 
 FONT_PATH = "Tests/fonts/FreeMono.ttf"
+
+
+def test_long_text_preserves_glyph_positions_and_advance() -> None:
+    font = ImageFont.truetype(FONT_PATH, 32768, layout_engine=ImageFont.Layout.BASIC)
+    count = 2000
+    advance = font.getlength("A")
+    left, top, right, bottom = font.getbbox("A")
+    assert font.getlength("A" * count) == advance * count
+    assert font.getbbox("A" * count) == (
+        left,
+        top,
+        right + advance * (count - 1),
+        bottom,
+    )
+
+
 FONT_SIZE = 20
 
 TEST_TEXT = "hey you\nyou are awesome\nthis looks awkward"

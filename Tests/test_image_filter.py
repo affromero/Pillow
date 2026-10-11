@@ -1,10 +1,66 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pytest
 
 from PIL import Image, ImageFilter
 
 from .helper import assert_image_equal, hopper
+
+
+@pytest.mark.parametrize("size", [46341, 2**30 + 1, 2**31 - 1])
+@pytest.mark.parametrize(
+    "filter_type",
+    [ImageFilter.MinFilter, ImageFilter.MaxFilter, ImageFilter.MedianFilter],
+)
+def test_oversized_rank_filters_fail_before_allocating(
+    size: int, filter_type: type
+) -> None:
+    with pytest.raises(ValueError, match="too large"):
+        Image.new("L", (3, 3)).filter(filter_type(size))
+
+
+def test_single_pixel_rank_filter_preserves_pixels() -> None:
+    image = hopper("L")
+    assert_image_equal(image.filter(ImageFilter.MedianFilter(1)), image)
+
+
+def test_native_border_expansion_rejects_oversized_kernel() -> None:
+    with pytest.raises(ValueError, match="too large"):
+        Image.new("L", (1, 1)).im.expand(23171, 23171)
+
+
+@pytest.mark.parametrize("size", [(0, 1), (1, 0), (0, 0)])
+def test_zero_border_preserves_empty_images(size: tuple[int, int]) -> None:
+    image = Image.new("L", size)
+    assert image.im.expand(0, 0).size == size
+    assert_image_equal(image.filter(ImageFilter.MedianFilter(1)), image)
+
+
+@pytest.mark.parametrize("size", [(0, 1), (1, 0), (0, 0)])
+@pytest.mark.parametrize("operation", ["filter", "expand"])
+def test_empty_images_reject_border_expansion(
+    size: tuple[int, int], operation: str
+) -> None:
+    code = f"""
+from PIL import Image, ImageFilter
+image = Image.new('L', {size!r})
+try:
+    if {operation!r} == 'filter':
+        image.filter(ImageFilter.MedianFilter(3))
+    else:
+        image.im.expand(1, 1)
+except ValueError as error:
+    assert 'empty image' in str(error), str(error)
+else:
+    raise AssertionError('empty border expansion must fail')
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 @pytest.mark.parametrize(
@@ -163,9 +219,7 @@ def test_consistency_3x3(mode: str) -> None:
             kernel = ImageFilter.Kernel(
                 (3, 3),
                 # fmt: off
-                (-1, -1,  0,
-                 -1,  0,  1,
-                 0,   1,  1),
+                (-1, -1, 0, -1, 0, 1, 0, 1, 1),
                 # fmt: on
                 0.3,
             )
@@ -181,11 +235,33 @@ def test_consistency_5x5(mode: str) -> None:
             kernel = ImageFilter.Kernel(
                 (5, 5),
                 # fmt: off
-                (-1, -1, -1, -1,  0,
-                 -1, -1, -1,  0,  1,
-                 -1, -1,  0,  1,  1,
-                 -1,  0,  1,  1,  1,
-                 0,   1,  1,  1,  1),
+                (
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    0,
+                    -1,
+                    -1,
+                    -1,
+                    0,
+                    1,
+                    -1,
+                    -1,
+                    0,
+                    1,
+                    1,
+                    -1,
+                    0,
+                    1,
+                    1,
+                    1,
+                    0,
+                    1,
+                    1,
+                    1,
+                    1,
+                ),
                 # fmt: on
                 0.3,
             )

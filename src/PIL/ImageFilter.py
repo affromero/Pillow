@@ -100,6 +100,9 @@ class RankFilter(Filter):
         self.rank = rank
 
     def filter(self, image: _imaging.ImagingCore) -> _imaging.ImagingCore:
+        if self.size * self.size * 4 > (2**31 - 1):
+            msg = "filter size too large"
+            raise ValueError(msg)
         if image.mode == "P":
             msg = "cannot filter palette images"
             raise ValueError(msg)

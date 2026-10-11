@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import warnings
 
 import pytest
@@ -9,6 +10,28 @@ from PIL import Image, PsdImagePlugin
 from .helper import assert_image_equal_tofile, assert_image_similar, hopper, is_pypy
 
 test_file = "Tests/images/hopper.psd"
+
+
+@pytest.mark.parametrize(
+    "name", ["psd-oob-write.psd", "psd-oob-write-x.psd", "psd-oob-write-y.psd"]
+)
+def test_invalid_layer_bounds_are_rejected_before_decoding(name: str) -> None:
+    with Image.open("Tests/images/" + name) as image:
+        image.seek(image.n_frames)
+        with pytest.raises(ValueError):
+            image.load()
+
+
+def test_overflowing_layer_bounds_are_rejected_before_decoding() -> None:
+    with Image.open("Tests/images/psd-oob-write-overflow.psd") as image:
+        image.load()
+        if sys.maxsize <= 2**32:
+            with pytest.raises(OverflowError):
+                image.seek(image.n_frames)
+        else:
+            image.seek(image.n_frames)
+            with pytest.raises(ValueError):
+                image.load()
 
 
 def test_sanity() -> None:

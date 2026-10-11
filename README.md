@@ -97,6 +97,40 @@ The core image library is designed for fast access to data stored in a few basic
 
 ## More information
 
+This fork preserves Pillow 11.3 APIs and backports security fixes from upstream
+python-pillow/Pillow. Its version identifies the maintained backport separately
+from upstream releases. Native codecs remain enabled.
+
+Patch provenance: a9ffc42bedf4fc0a7ef8d6486e7f9e81e3397721,
+13ada41172142f2fd9f0906f615a00ea623a11ca,
+f7a31ea75e460e108c37126da1f47812f21f6b09,
+ceefc348eb3c3844c7f9796ef2cc3a7dd5fbba7b,
+eada3cbd7fb9963ee90673fb7b5270124a0d5f4b,
+cce3bdb867c77a3420261ed1bfdb6b0787ec8fc1,
+b0e06caa64c1405aa3da0bb1d2bd9a77ca22de7f,
+88194166691b7b603529b8b036ab3ab9cedd2de4,
+8404ea5fe5df40fc34aa1e51403dd6fce0778b8a,
+f39b0ae6624eb2d7c5c5d651d9bb5fdbd96a8675,
+0a263e6264aa5399988d9acd3bbfbca2ca3ec77d,
+6a8de891fb00968e5ea79bfa84368ed90b3cfc1d,
+58f9a1d166dcb0c274807d4423522d205b0c35ea,
+3bf614e4b8615d0ce1d5039efaf6db447fe7c468,
+ec8272044d2adfc97a5f4b6e921c1a908318d9cb,
+cf6de8ca9b23e714aa5310e1c791eda66fc0b670,
+3cb854e8b2bab43f40e342e665f9340d861aa628,
+54ba4db542ad3c7b918812a4e2d69c27735a3199,
+78ee80a6fdd4b787f71880f10e66d6b989c6e58d,
+f0f67f8cf86e6fc049dec23996c41653a5fdd63f, and
+64f6d4ebd878d00b581812faab3f9863576470e6.
+
+Adaptations retain the 11.3 default tile extent convention and two-margin
+filter API, check both PCF metric formats, validate mapped row sizes and offsets,
+and use widened arithmetic before allocation or subtraction. The filter checks
+also avoid zero division and signed overflow in the newer upstream guard.
+Empty images reject border expansion while zero-margin copies remain valid.
+Long-text advance accumulation uses 64-bit arithmetic alongside the upstream
+glyph-position fix.
+
 - [Documentation](https://pillow.readthedocs.io/)
   - [Installation](https://pillow.readthedocs.io/en/latest/installation/basic-installation.html)
   - [Handbook](https://pillow.readthedocs.io/en/latest/handbook/index.html)

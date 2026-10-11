@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 from io import BytesIO
 
 import pytest
@@ -9,6 +10,16 @@ from PIL import FitsImagePlugin, Image
 from .helper import assert_image_equal, assert_image_equal_tofile, hopper
 
 TEST_FILE = "Tests/images/hopper.fits"
+
+
+def test_gzip_decoder_reads_only_the_declared_pixel_payload() -> None:
+    image = Image.new("L", (1, 1))
+    payload = gzip.compress(b"\x00\x00\x00\x07") + b"\x1f\x8b\x08\x00"
+    decoder = FitsImagePlugin.FitsGzipDecoder("L", 8)
+    decoder.setimage(image.im)
+    decoder.setfd(BytesIO(payload))
+    assert decoder.decode(b"") == (-1, 0)
+    assert image.getpixel((0, 0)) == 7
 
 
 def test_open() -> None:

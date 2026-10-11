@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from io import BytesIO
+
 import pytest
 
-from PIL import GdImageFile, UnidentifiedImageError
+from PIL import GdImageFile, Image, UnidentifiedImageError, _binary
 
 from .helper import assert_image_similar_tofile
 
@@ -19,6 +21,12 @@ def test_sanity() -> None:
 def test_bad_mode() -> None:
     with pytest.raises(ValueError):
         GdImageFile.open(TEST_GD_FILE, "bad mode")
+
+
+def test_decompression_bomb() -> None:
+    b = BytesIO(_binary.o16be(65535) + _binary.o16be(50000) + _binary.o16be(50000))
+    with pytest.raises(Image.DecompressionBombError):
+        GdImageFile.open(b)
 
 
 def test_invalid_file() -> None:

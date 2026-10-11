@@ -43,7 +43,7 @@ PCF_GLYPH_NAMES = 1 << 7
 PCF_BDF_ACCELERATORS = 1 << 8
 
 BYTES_PER_ROW: list[Callable[[int], int]] = [
-    lambda bits: ((bits + 7) >> 3),
+    lambda bits: (bits + 7) >> 3,
     lambda bits: ((bits + 15) >> 3) & ~1,
     lambda bits: ((bits + 31) >> 3) & ~3,
     lambda bits: ((bits + 63) >> 3) & ~7,
@@ -166,6 +166,7 @@ class PcfFontFile(FontFile.FontFile):
                 descent = i8(fp.read(1)) - 128
                 xsize = right - left
                 ysize = ascent + descent
+                Image._decompression_bomb_check((xsize, ysize))
                 append((xsize, ysize, left, right, width, ascent, descent, 0))
 
         else:
@@ -179,6 +180,7 @@ class PcfFontFile(FontFile.FontFile):
                 attributes = i16(fp.read(2))
                 xsize = right - left
                 ysize = ascent + descent
+                Image._decompression_bomb_check((xsize, ysize))
                 append((xsize, ysize, left, right, width, ascent, descent, attributes))
 
         return metrics

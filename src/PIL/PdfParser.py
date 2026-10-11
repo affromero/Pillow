@@ -10,6 +10,8 @@ import time
 import zlib
 from typing import IO, Any, NamedTuple, Union
 
+from . import ImageFile
+
 
 # see 7.9.2.2 Text String Type on page 86 and D.3 PDFDocEncoding Character Set
 # on page 656
@@ -113,12 +115,12 @@ class IndirectObjectDef(IndirectReference):
 
 class XrefTable:
     def __init__(self) -> None:
-        self.existing_entries: dict[int, tuple[int, int]] = (
-            {}
-        )  # object ID => (offset, generation)
-        self.new_entries: dict[int, tuple[int, int]] = (
-            {}
-        )  # object ID => (offset, generation)
+        self.existing_entries: dict[
+            int, tuple[int, int]
+        ] = {}  # object ID => (offset, generation)
+        self.new_entries: dict[
+            int, tuple[int, int]
+        ] = {}  # object ID => (offset, generation)
         self.deleted_entries = {0: 65536}  # object ID => generation
         self.reading_finished = False
 
@@ -319,17 +321,21 @@ class PdfStream:
         self.dictionary = dictionary
         self.buf = buf
 
-    def decode(self) -> bytes:
+    def decode(self, max_length: int = ImageFile.SAFEBLOCK) -> bytes:
         try:
             filter = self.dictionary[b"Filter"]
         except KeyError:
             return self.buf
         if filter == b"FlateDecode":
-            try:
-                expected_length = self.dictionary[b"DL"]
-            except KeyError:
-                expected_length = self.dictionary[b"Length"]
-            return zlib.decompress(self.buf, bufsize=int(expected_length))
+            if max_length <= 0:
+                msg = "max_length must be positive"
+                raise ValueError(msg)
+            decompressor = zlib.decompressobj()
+            plaintext = decompressor.decompress(self.buf, max_length)
+            if decompressor.unconsumed_tail:
+                msg = "Decompressed data too large"
+                raise ValueError(msg)
+            return plaintext
         else:
             msg = f"stream filter {repr(filter)} unknown/unsupported"
             raise NotImplementedError(msg)
@@ -401,7 +407,11 @@ class PdfParser:
         self.pages_ref: IndirectReference | None
         self.last_xref_section_offset: int | None
         if self.buf:
-            self.read_pdf_info()
+            try:
+                self.read_pdf_info()
+            except PdfFormatError:
+                self.close()
+                raise
         else:
             self.file_size_total = self.file_size_this = 0
             self.root = PdfDict()
@@ -684,7 +694,9 @@ class PdfParser:
         if b"Prev" in self.trailer_dict:
             self.read_prev_trailer(self.trailer_dict[b"Prev"])
 
-    def read_prev_trailer(self, xref_section_offset: int) -> None:
+    def read_prev_trailer(
+        self, xref_section_offset: int, processed_offsets: list[int] | None = None
+    ) -> None:
         assert self.buf is not None
         trailer_offset = self.read_xref_table(xref_section_offset=xref_section_offset)
         m = self.re_trailer_prev.search(
@@ -699,7 +711,13 @@ class PdfParser:
         )
         trailer_dict = self.interpret_trailer(trailer_data)
         if b"Prev" in trailer_dict:
-            self.read_prev_trailer(trailer_dict[b"Prev"])
+            if processed_offsets is None:
+                processed_offsets = []
+            processed_offsets.append(xref_section_offset)
+            check_format_condition(
+                trailer_dict[b"Prev"] not in processed_offsets, "trailer loop found"
+            )
+            self.read_prev_trailer(trailer_dict[b"Prev"], processed_offsets)
 
     re_whitespace_optional = re.compile(whitespace_optional)
     re_name = re.compile(

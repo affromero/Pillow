@@ -519,7 +519,7 @@ text_layout(
 
 static PyObject *
 font_getlength(FontObject *self, PyObject *args) {
-    int length;                   /* length along primary axis, in 26.6 precision */
+    int64_t length;               /* length along primary axis, in 26.6 precision */
     GlyphInfo *glyph_info = NULL; /* computed text layout */
     size_t i, count;              /* glyph_info index and length */
     int horizontal_dir;           /* is primary axis horizontal? */
@@ -563,7 +563,7 @@ font_getlength(FontObject *self, PyObject *args) {
         glyph_info = NULL;
     }
 
-    return PyLong_FromLong(length);
+    return PyLong_FromLongLong(length);
 }
 
 static int
@@ -579,9 +579,9 @@ bounding_box_and_anchors(
     int *x_offset,
     int *y_offset
 ) {
-    int position; /* pen position along primary axis, in 26.6 precision */
-    int advanced; /* pen position along primary axis, in pixels */
-    int px, py;   /* position of current glyph, in pixels */
+    long position; /* pen position along primary axis, in 26.6 precision */
+    long advanced; /* pen position along primary axis, in pixels */
+    int px, py;    /* position of current glyph, in pixels */
     int x_min, x_max, y_min, y_max; /* text bounding box, in pixels */
     int x_anchor, y_anchor;         /* offset of point drawn at (0, 0), in pixels */
     int error;

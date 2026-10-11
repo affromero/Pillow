@@ -56,8 +56,20 @@ ImagingExpand(Imaging imIn, int xmargin, int ymargin) {
     int x, y;
     ImagingSectionCookie cookie;
 
-    if (xmargin < 0 && ymargin < 0) {
+    if (xmargin < 0 || ymargin < 0) {
         return (Imaging)ImagingError_ValueError("bad kernel size");
+    }
+    if (xmargin == 0 && ymargin == 0) {
+        return ImagingCopy(imIn);
+    }
+    if (imIn->xsize == 0 || imIn->ysize == 0) {
+        return (Imaging)ImagingError_ValueError("cannot expand an empty image");
+    }
+    if ((int64_t)xmargin * xmargin > INT_MAX / sizeof(FLOAT32) ||
+        (int64_t)ymargin * ymargin > INT_MAX / sizeof(FLOAT32) ||
+        xmargin > (INT_MAX - imIn->xsize) / 2 ||
+        ymargin > (INT_MAX - imIn->ysize) / 2) {
+        return (Imaging)ImagingError_ValueError("filter size too large");
     }
 
     imOut = ImagingNewDirty(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -8,6 +10,30 @@ import pytest
 from PIL import Image, ImageShow
 
 from .helper import hopper, is_win32, on_ci
+
+
+def test_windows_viewer_rejects_quotes_and_escapes_percent_expansion() -> None:
+    viewer = ImageShow.WindowsViewer()
+    with pytest.raises(ValueError, match="double quotes"):
+        viewer.get_command('invalid"name.png')
+    command = viewer.get_command("%PILLOW_TEST%.png")
+    assert '"%"PILLOW_TEST"%".png' in command
+
+
+def test_windows_viewer_passes_literal_filename_to_os(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "%PILLOW_TEST% & (image).png"
+    path.write_bytes(b"image")
+    launched = []
+    cleanup = []
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(os, "startfile", launched.append, raising=False)
+    monkeypatch.setattr(ImageShow.subprocess, "Popen", cleanup.append)
+    assert ImageShow.WindowsViewer().show_file(str(path)) == 1
+    assert launched == [str(path)]
+    assert cleanup
+    assert cleanup[0][-1] == str(path)
 
 
 def test_sanity() -> None:

@@ -30,6 +30,25 @@ MAXBLOCK = ImageFile.MAXBLOCK
 SAFEBLOCK = ImageFile.SAFEBLOCK
 
 
+@pytest.mark.parametrize("codec_type", [ImageFile.PyDecoder, ImageFile.PyEncoder])
+@pytest.mark.parametrize("extents", [(-1, 0, 1, 1), (0, -1, 1, 1)])
+def test_python_codecs_reject_negative_tile_origins(
+    codec_type: type, extents: tuple[int, int, int, int]
+) -> None:
+    codec = codec_type("L")
+    with pytest.raises(ValueError):
+        codec.setimage(Image.new("L", (2, 2)).im, extents)
+
+
+@pytest.mark.parametrize("extents", [(-1, 0, 1, 1), (0, -1, 1, 1)])
+def test_raw_encoder_rejects_negative_tile_origins(
+    extents: tuple[int, int, int, int],
+) -> None:
+    encoder = Image._getencoder("L", "raw", "L")
+    with pytest.raises(SystemError, match="tile cannot extend outside image"):
+        encoder.setimage(Image.new("L", (2, 2)).im, extents)
+
+
 class TestImageFile:
     def test_parser(self) -> None:
         def roundtrip(format: str) -> tuple[Image.Image, Image.Image]:

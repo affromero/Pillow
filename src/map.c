@@ -82,14 +82,18 @@ PyImaging_MapBuffer(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (stride <= 0) {
-        if (!strcmp(mode, "L") || !strcmp(mode, "P")) {
-            stride = xsize;
-        } else if (!strncmp(mode, "I;16", 4)) {
-            stride = xsize * 2;
-        } else {
-            stride = xsize * 4;
-        }
+    if (xsize < 0 || ysize < 0 || offset < 0) {
+        PyErr_SetString(PyExc_ValueError, "negative image dimension or buffer offset");
+        return NULL;
+    }
+    int pixelsize = (!strcmp(mode, "L") || !strcmp(mode, "P")) ? 1 :
+        (!strncmp(mode, "I;16", 4) ? 2 : 4);
+    if (xsize > INT_MAX / pixelsize) {
+        PyErr_SetString(PyExc_MemoryError, "Integer overflow in row size");
+        return NULL;
+    }
+    if (stride < xsize * pixelsize) {
+        stride = xsize * pixelsize;
     }
 
     if (stride > 0 && ysize > PY_SSIZE_T_MAX / stride) {

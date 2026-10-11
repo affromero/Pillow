@@ -177,20 +177,19 @@ _setimage(ImagingDecoderObject *decoder, PyObject *args) {
 
     /* Setup decoding tile extent */
     if (x0 == 0 && x1 == 0) {
-        state->xsize = im->xsize;
-        state->ysize = im->ysize;
-    } else {
-        state->xoff = x0;
-        state->yoff = y0;
-        state->xsize = x1 - x0;
-        state->ysize = y1 - y0;
+        x0 = y0 = 0;
+        x1 = im->xsize;
+        y1 = im->ysize;
     }
-
-    if (state->xsize <= 0 || state->xsize + state->xoff > (int)im->xsize ||
-        state->ysize <= 0 || state->ysize + state->yoff > (int)im->ysize) {
+    if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 ||
+        x1 > (int)im->xsize || y1 > (int)im->ysize) {
         PyErr_SetString(PyExc_ValueError, "tile cannot extend outside image");
         return NULL;
     }
+    state->xoff = x0;
+    state->yoff = y0;
+    state->xsize = x1 - x0;
+    state->ysize = y1 - y0;
 
     /* Allocate memory buffer (if bits field is set) */
     if (state->bits > 0) {

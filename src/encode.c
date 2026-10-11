@@ -245,20 +245,19 @@ _setimage(ImagingEncoderObject *encoder, PyObject *args) {
     state = &encoder->state;
 
     if (x0 == 0 && x1 == 0) {
-        state->xsize = im->xsize;
-        state->ysize = im->ysize;
-    } else {
-        state->xoff = x0;
-        state->yoff = y0;
-        state->xsize = x1 - x0;
-        state->ysize = y1 - y0;
+        x0 = y0 = 0;
+        x1 = im->xsize;
+        y1 = im->ysize;
     }
-
-    if (state->xsize <= 0 || state->xsize + state->xoff > im->xsize ||
-        state->ysize <= 0 || state->ysize + state->yoff > im->ysize) {
+    if (x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 ||
+        x1 > im->xsize || y1 > im->ysize) {
         PyErr_SetString(PyExc_SystemError, "tile cannot extend outside image");
         return NULL;
     }
+    state->xoff = x0;
+    state->yoff = y0;
+    state->xsize = x1 - x0;
+    state->ysize = y1 - y0;
 
     /* Allocate memory buffer (if bits field is set) */
     if (state->bits > 0) {
