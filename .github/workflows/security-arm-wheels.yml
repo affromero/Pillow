@@ -1,0 +1,47 @@
+name: Pillow 11.3 ARM64 security wheel
+
+on:
+  push:
+    branches: [security/11.3-backports]
+    paths: [.github/workflows/security-arm-wheels.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-wheel:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: b5d22e61428bd4236e26dc072529826f1385ed3e
+          submodules: recursive
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+      - name: Build and test the ARM64 wheel with upstream codec packaging
+        env:
+          CIBW_ARCHS: aarch64
+          CIBW_BUILD: cp311-manylinux_aarch64
+          CIBW_BUILD_FRONTEND: build[uv]
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+        run: |
+          mkdir /tmp/pillow-wheel-tools
+          cat > /tmp/pillow-wheel-tools/pyproject.toml <<'TOML'
+          [project]
+          name = "pillow-wheel-tools"
+          version = "0.0.0"
+          requires-python = ">=3.11,<3.12"
+          dependencies = ["cibuildwheel[uv]==3.0.0"]
+          TOML
+          uv sync --project /tmp/pillow-wheel-tools --python 3.11.15
+          /tmp/pillow-wheel-tools/.venv/bin/python -m cibuildwheel --output-dir wheelhouse
+          sha256sum wheelhouse/*.whl > wheelhouse/SHA256SUMS
+          git rev-parse HEAD > wheelhouse/source-revision.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pillow-security-b5d22e61428bd4236e26dc072529826f1385ed3e-aarch64
+          path: wheelhouse/
+          if-no-files-found: error
+          retention-days: 90
